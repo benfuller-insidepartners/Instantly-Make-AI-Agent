@@ -1,0 +1,389 @@
+{
+  "name": "Instantly AI Lead Finder v1.0",
+  "flow": [
+    {
+      "id": 1,
+      "module": "gateway:CustomWebHook",
+      "version": 1,
+      "parameters": {
+        "hook": 299156,
+        "maxResults": 1
+      },
+      "mapper": {},
+      "metadata": {
+        "designer": {
+          "x": 0,
+          "y": 0
+        },
+        "restore": {},
+        "parameters": [
+          {
+            "name": "hook",
+            "type": "hook",
+            "label": "Webhook",
+            "required": true
+          }
+        ],
+        "expect": [
+          {
+            "name": "goal",
+            "type": "text",
+            "label": "Search Goal",
+            "required": true
+          },
+          {
+            "name": "target_count_min",
+            "type": "number",
+            "label": "Minimum Lead Count",
+            "required": false
+          },
+          {
+            "name": "target_count_max",
+            "type": "number",
+            "label": "Maximum Lead Count",
+            "required": false
+          },
+          {
+            "name": "auto_enrich",
+            "type": "boolean",
+            "label": "Auto-enrich when optimal?",
+            "required": false
+          }
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "module": "builtin:BasicFeeder",
+      "version": 1,
+      "parameters": {},
+      "mapper": {
+        "array": "[\n  {\n    \"iteration\": 1,\n    \"max_iterations\": 5,\n    \"current_filters\": {},\n    \"lead_counts\": [],\n    \"proceed\": false,\n    \"target_min\": {{if(1.target_count_min; 1.target_count_min; 500)}},\n    \"target_max\": {{if(1.target_count_max; 1.target_count_max; 2000)}}\n  }\n]"
+      },
+      "metadata": {
+        "designer": {
+          "x": 300,
+          "y": 0
+        },
+        "restore": {
+          "expect": {
+            "array": {
+              "mode": "edit"
+            }
+          }
+        },
+        "expect": [
+          {
+            "name": "array",
+            "type": "array",
+            "label": "Array",
+            "required": true
+          }
+        ]
+      }
+    },
+    {
+      "id": 3,
+      "module": "anthropic:completion",
+      "version": 1,
+      "parameters": {
+        "connection": "anthropic"
+      },
+      "mapper": {
+        "model": "claude-sonnet-4-20250514",
+        "system": "You are a lead generation expert for Instantly.ai SuperSearch.\n\nConvert natural language goals into precise search filters.\n\nAvailable filters:\n- locations: {include: [{country, state?, city?}], exclude: []}\n- job_titles: {include: [], exclude: []}\n- management_levels: [\"c_level\", \"vp\", \"director\", \"manager\"]\n- departments: [\"executive\", \"sales\", \"marketing\", \"engineering\"]\n- industries: [\"Technology\", \"SaaS\", \"Healthcare\"]\n- company_size: {min: number, max: number}\n- revenue_range: {min: number, max: number}\n- technologies: [\"Salesforce\", \"HubSpot\"]\n- keywords: [\"hiring\", \"funded\", \"growing\"]\n- funding_stage: [\"funded\", \"unfunded\"]\n- funding_type: [\"seed\", \"series_a\", \"series_b\"]\n\nReturn ONLY valid JSON with these exact keys. No markdown, no explanation.",
+        "messages": [
+          {
+            "role": "user",
+            "content": "Goal: {{1.goal}}\n\nGenerate optimal search filters. Be specific but not overly restrictive.\nReturn pure JSON only."
+          }
+        ],
+        "max_tokens": 1500
+      },
+      "metadata": {
+        "designer": {
+          "x": 600,
+          "y": 0
+        }
+      }
+    },
+    {
+      "id": 4,
+      "module": "util:TextParser",
+      "version": 1,
+      "parameters": {},
+      "mapper": {
+        "pattern": "```json|```|`json|`",
+        "text": "{{3.output}}",
+        "global": true
+      },
+      "metadata": {
+        "designer": {
+          "x": 900,
+          "y": 0
+        }
+      }
+    },
+    {
+      "id": 5,
+      "module": "json:ParseJSON",
+      "version": 1,
+      "parameters": {},
+      "mapper": {
+        "json": "{{4.text}}"
+      },
+      "metadata": {
+        "designer": {
+          "x": 1200,
+          "y": 0
+        }
+      }
+    },
+    {
+      "id": 6,
+      "module": "builtin:Repeater",
+      "version": 1,
+      "parameters": {},
+      "mapper": {
+        "repeats": "{{2.max_iterations}}",
+        "break": "{{2.proceed}}"
+      },
+      "metadata": {
+        "designer": {
+          "x": 1500,
+          "y": 0
+        }
+      }
+    },
+    {
+      "id": 7,
+      "module": "http:ActionSendData",
+      "version": 3,
+      "parameters": {},
+      "mapper": {
+        "url": "https://api.instantly.ai/api/v2/supersearch-enrichment/preview-leads-from-supersearch",
+        "serializeUrl": false,
+        "method": "post",
+        "headers": [
+          {
+            "name": "Authorization",
+            "value": "Bearer YOUR_INSTANTLY_API_KEY"
+          },
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "qs": [],
+        "bodyType": "raw",
+        "parseResponse": true,
+        "authUser": "",
+        "authPass": "",
+        "timeout": "",
+        "shareCookies": false,
+        "ca": "",
+        "rejectUnauthorized": true,
+        "followRedirect": true,
+        "useQuerystring": false,
+        "gzip": true,
+        "useMtls": false,
+        "contentType": "application/json",
+        "body": "{\"search_filters\": {{if(2.iteration = 1; 5; get(2; \"current_filters\"))}}}"
+      },
+      "metadata": {
+        "designer": {
+          "x": 1800,
+          "y": 0
+        },
+        "restore": {
+          "expect": {
+            "method": {
+              "mode": "chose",
+              "label": "POST"
+            },
+            "headers": {
+              "mode": "chose"
+            },
+            "qs": {
+              "mode": "chose"
+            },
+            "bodyType": {
+              "label": "Raw"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": 8,
+      "module": "builtin:BasicRouter",
+      "version": 1,
+      "parameters": {},
+      "mapper": null,
+      "metadata": {
+        "designer": {
+          "x": 2100,
+          "y": 0
+        }
+      },
+      "routes": [
+        {
+          "flow": [
+            {
+              "id": 9,
+              "module": "anthropic:completion",
+              "version": 1,
+              "parameters": {},
+              "mapper": {
+                "model": "claude-sonnet-4-20250514",
+                "system": "You are refining lead search filters. Current search returned {{7.data.count}} leads but target is {{2.target_min}}-{{2.target_max}}.\n\nToo few results - need to BROADEN.\n\nCurrent filters:\n{{if(2.iteration = 1; 5; get(2; \"current_filters\"))}}\n\nSuggest ONE modification to broaden results:\n- Expand geographic area\n- Add more job titles  \n- Increase company size range\n- Remove restrictive filters\n- Add more industries\n\nRespond ONLY with JSON:\n{\n  \"modified_filters\": {...complete filter object...},\n  \"change_description\": \"what changed\",\n  \"estimated_new_count\": number\n}",
+                "messages": [
+                  {
+                    "role": "user",
+                    "content": "Broaden the search"
+                  }
+                ],
+                "max_tokens": 1500
+              },
+              "metadata": {
+                "designer": {
+                  "x": 2400,
+                  "y": -300
+                }
+              }
+            }
+          ],
+          "filter": {
+            "name": "Too Few Leads",
+            "conditions": [
+              [
+                {
+                  "a": "{{7.data.count}}",
+                  "o": "number:less",
+                  "b": "{{2.target_min}}"
+                }
+              ]
+            ]
+          }
+        },
+        {
+          "flow": [
+            {
+              "id": 10,
+              "module": "anthropic:completion",
+              "version": 1,
+              "parameters": {},
+              "mapper": {
+                "model": "claude-sonnet-4-20250514",
+                "system": "You are refining lead search filters. Current search returned {{7.data.count}} leads but target is {{2.target_min}}-{{2.target_max}}.\n\nToo many results - need to NARROW.\n\nCurrent filters:\n{{if(2.iteration = 1; 5; get(2; \"current_filters\"))}}\n\nSuggest ONE modification to narrow results:\n- Narrow geographic area\n- Be more specific with job titles\n- Reduce company size range\n- Add department filter\n- Add industry specificity\n- Add keywords\n- Add management level\n\nRespond ONLY with JSON:\n{\n  \"modified_filters\": {...complete filter object...},\n  \"change_description\": \"what changed\",\n  \"estimated_new_count\": number\n}",
+                "messages": [
+                  {
+                    "role": "user",
+                    "content": "Narrow the search"
+                  }
+                ],
+                "max_tokens": 1500
+              },
+              "metadata": {
+                "designer": {
+                  "x": 2400,
+                  "y": 0
+                }
+              }
+            }
+          ],
+          "filter": {
+            "name": "Too Many Leads",
+            "conditions": [
+              [
+                {
+                  "a": "{{7.data.count}}",
+                  "o": "number:greater",
+                  "b": "{{2.target_max}}"
+                }
+              ]
+            ]
+          }
+        },
+        {
+          "flow": [
+            {
+              "id": 11,
+              "module": "builtin:SetVariable",
+              "version": 1,
+              "parameters": {},
+              "mapper": {
+                "name": "proceed",
+                "scope": "roundtrip",
+                "value": "true"
+              },
+              "metadata": {
+                "designer": {
+                  "x": 2400,
+                  "y": 300
+                }
+              }
+            }
+          ],
+          "filter": {
+            "name": "Optimal Range",
+            "conditions": [
+              [
+                {
+                  "a": "{{7.data.count}}",
+                  "o": "number:greaterequal",
+                  "b": "{{2.target_min}}"
+                },
+                {
+                  "a": "{{7.data.count}}",
+                  "o": "number:lessequal",
+                  "b": "{{2.target_max}}"
+                }
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "module": "gateway:WebhookRespond",
+      "version": 1,
+      "parameters": {},
+      "mapper": {
+        "status": "200",
+        "body": "{\n  \"status\": \"success\",\n  \"goal\": \"{{1.goal}}\",\n  \"iterations\": {{2.iteration}},\n  \"final_count\": {{7.data.count}},\n  \"filters\": {{if(2.iteration = 1; 5; get(2; \"current_filters\"))}},\n  \"estimated_credits\": {{multiply(7.data.count; 1.5)}},\n  \"message\": \"Search refinement complete. {{if(1.auto_enrich; 'Enrichment started automatically.'; 'Awaiting approval to enrich.')}}\"\n}",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ]
+      },
+      "metadata": {
+        "designer": {
+          "x": 2700,
+          "y": 0
+        }
+      }
+    }
+  ],
+  "metadata": {
+    "instant": false,
+    "version": 1,
+    "scenario": {
+      "roundtrips": 1,
+      "maxErrors": 3,
+      "autoCommit": true,
+      "autoCommitTriggerLast": true,
+      "sequential": false,
+      "confidential": false,
+      "dataloss": false,
+      "dlq": false
+    },
+    "designer": {
+      "orphans": []
+    },
+    "zone": "us1.make.com"
+  }
+}
