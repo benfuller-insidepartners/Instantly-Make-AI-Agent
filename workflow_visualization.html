@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instantly AI Agent - Make.com Workflow</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 32px;
+        }
+        .subtitle {
+            color: #666;
+            font-size: 16px;
+            margin-bottom: 30px;
+        }
+        .controls {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        button {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .info {
+            background: #e8f4f8;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .info h3 {
+            margin-top: 0;
+            color: #1976D2;
+        }
+        .legend {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 8px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .legend-color {
+            width: 30px;
+            height: 30px;
+            border-radius: 4px;
+            border: 2px solid #ddd;
+        }
+        #diagram {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+        .zoom-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        #zoom-level {
+            font-weight: 500;
+            min-width: 60px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Instantly AI Agent Workflow</h1>
+        <p class="subtitle">Make.com Scenario Visualization</p>
+
+        <div class="info">
+            <h3>📊 How to Use This Diagram</h3>
+            <p>This flowchart shows the complete Make.com scenario that automatically finds and enriches leads using AI. Follow the arrows from top to bottom to see how your search goal becomes refined, targeted lead lists.</p>
+        </div>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background: #e1f5ff;"></div>
+                <span><strong>Blue:</strong> Start/End (Webhook)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #fff4e6;"></div>
+                <span><strong>Orange:</strong> AI Modules (Claude)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #f3e5f5;"></div>
+                <span><strong>Purple:</strong> HTTP API Calls</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #e8f5e9;"></div>
+                <span><strong>Green:</strong> Success States</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #fff9c4;"></div>
+                <span><strong>Yellow:</strong> Decision Points</span>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="zoom-control">
+                <button onclick="zoomOut()">−</button>
+                <span id="zoom-level">100%</span>
+                <button onclick="zoomIn()">+</button>
+            </div>
+            <button onclick="resetZoom()">Reset Zoom</button>
+            <button onclick="downloadSVG()">💾 Download SVG</button>
+            <button onclick="downloadPNG()">📸 Download PNG</button>
+            <button onclick="toggleDirection()">🔄 Change Direction</button>
+        </div>
+
+        <div id="diagram">
+            <div class="mermaid">
+flowchart TD
+    Start([Webhook Trigger<br/>User submits goal]) --> Init[Initialize Variables<br/>iteration=1<br/>max_iterations=5<br/>proceed=false]
+    
+    Init --> AIGen[AI: Generate Initial Filters<br/>Claude analyzes goal<br/>Returns search filters]
+    
+    AIGen --> Clean[Clean AI Response<br/>Remove markdown<br/>Parse JSON]
+    
+    Clean --> Loop{Repeater Loop<br/>Max 5 iterations}
+    
+    Loop -->|Start iteration| Preview[HTTP: Preview Search<br/>POST /preview-leads<br/>Returns lead count]
+    
+    Preview --> AddCount[Add count to history<br/>Track iterations]
+    
+    AddCount --> Router{Route by Count}
+    
+    Router -->|count < min| TooFew[AI: Broaden Search<br/>Suggest filter changes<br/>to increase results]
+    
+    Router -->|count > max| TooMany[AI: Narrow Search<br/>Suggest filter changes<br/>to decrease results]
+    
+    Router -->|min ≤ count ≤ max| Perfect[Set proceed=true<br/>Optimal range found!]
+    
+    Router -->|iteration = max| MaxIter[Force proceed=true<br/>Max iterations reached]
+    
+    TooFew --> ParseRefine[Parse AI Refinement<br/>Update filters]
+    TooMany --> ParseRefine
+    
+    ParseRefine --> IncIter[Increment iteration<br/>iteration++]
+    
+    IncIter --> Loop
+    
+    Perfect --> Done{Proceed?}
+    MaxIter --> Done
+    
+    Done -->|auto_enrich=true| Enrich[HTTP: Enrich Leads<br/>POST /enrich-leads<br/>Create list]
+    
+    Done -->|auto_enrich=false| Approval[Send Approval Request<br/>Email or Slack<br/>Wait for response]
+    
+    Approval -->|Approved| Enrich
+    Approval -->|Rejected| Cancel[Send Cancellation Notice]
+    
+    Enrich --> Status[HTTP: Get Status<br/>Check enrichment progress]
+    
+    Status --> Log[Optional: Log to Sheets<br/>Record search details]
+    
+    Log --> Notify[Send Success Notification<br/>Email/Slack with results]
+    
+    Notify --> End([Return Response<br/>Show final filters & count])
+    
+    Cancel --> End
+    
+    style Start fill:#e1f5ff
+    style End fill:#e1f5ff
+    style AIGen fill:#fff4e6
+    style TooFew fill:#fff4e6
+    style TooMany fill:#fff4e6
+    style Preview fill:#f3e5f5
+    style Enrich fill:#f3e5f5
+    style Status fill:#f3e5f5
+    style Perfect fill:#e8f5e9
+    style Router fill:#fff9c4
+    style Done fill:#fff9c4
+    style Loop fill:#fff9c4
+            </div>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: true,
+            theme: 'default',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'basis'
+            }
+        });
+
+        let currentZoom = 1.0;
+        let currentDirection = 'TD';
+
+        function zoomIn() {
+            currentZoom = Math.min(currentZoom + 0.1, 2.0);
+            applyZoom();
+        }
+
+        function zoomOut() {
+            currentZoom = Math.max(currentZoom - 0.1, 0.5);
+            applyZoom();
+        }
+
+        function resetZoom() {
+            currentZoom = 1.0;
+            applyZoom();
+        }
+
+        function applyZoom() {
+            const diagram = document.querySelector('#diagram svg');
+            if (diagram) {
+                diagram.style.transform = `scale(${currentZoom})`;
+                diagram.style.transformOrigin = 'top left';
+            }
+            document.getElementById('zoom-level').textContent = Math.round(currentZoom * 100) + '%';
+        }
+
+        function downloadSVG() {
+            const svg = document.querySelector('#diagram svg');
+            if (!svg) return;
+            
+            const svgData = new XMLSerializer().serializeToString(svg);
+            const blob = new Blob([svgData], { type: 'image/svg+xml' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'instantly-ai-agent-workflow.svg';
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function downloadPNG() {
+            const svg = document.querySelector('#diagram svg');
+            if (!svg) return;
+
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const svgData = new XMLSerializer().serializeToString(svg);
+            const img = new Image();
+            
+            img.onload = function() {
+                canvas.width = img.width * 2; // Higher resolution
+                canvas.height = img.height * 2;
+                ctx.scale(2, 2);
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0);
+                
+                canvas.toBlob(function(blob) {
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = 'instantly-ai-agent-workflow.png';
+                    link.click();
+                    URL.revokeObjectURL(url);
+                });
+            };
+            
+            img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+        }
+
+        function toggleDirection() {
+            currentDirection = currentDirection === 'TD' ? 'LR' : 'TD';
+            const mermaidDiv = document.querySelector('.mermaid');
+            const content = mermaidDiv.textContent;
+            const newContent = content.replace(/flowchart (TD|LR)/, `flowchart ${currentDirection}`);
+            mermaidDiv.textContent = newContent;
+            mermaidDiv.removeAttribute('data-processed');
+            mermaid.init(undefined, document.querySelector('.mermaid'));
+        }
+
+        // Apply zoom after mermaid renders
+        setTimeout(() => {
+            applyZoom();
+        }, 500);
+    </script>
+</body>
+</html>
